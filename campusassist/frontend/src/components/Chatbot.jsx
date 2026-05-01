@@ -28,7 +28,10 @@ export default function Chatbot({ isOpen, setIsOpen }) {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/chat', { message: userText });
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await axios.post(`${API_URL}/chat`, { 
+        message: userText 
+      });
       setMessages(prev => [...prev, { text: response.data.reply, isBot: true }]);
     } catch (error) {
       setMessages(prev => [...prev, { text: "Sorry, I'm having trouble connecting to the server.", isBot: true }]);
