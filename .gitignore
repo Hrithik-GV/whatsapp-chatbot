@@ -1,0 +1,28 @@
+# Environment Variables
+.env
+campusassist/backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+.env
+
+# Node
+node_modules/
+dist/
+dist-ssr
+*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
