@@ -63,6 +63,13 @@ def whatsapp():
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"})
+    
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "status": "online",
+        "message": "CampusAssist AI Backend Running"
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
