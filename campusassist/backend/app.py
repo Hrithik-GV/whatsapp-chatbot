@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,Response
+
 from flask_cors import CORS
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -46,24 +47,34 @@ def chat():
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp():
+
+    print("WhatsApp webhook hit")
+
     incoming_msg = request.values.get('Body', '').strip()
 
-    resp = MessagingResponse()
+    response = MessagingResponse()
 
     if not incoming_msg:
-        resp.message("Please send a valid message.")
-        return str(resp)
+        response.message("Please send a valid message.")
+
+        return Response(
+            str(response),
+            mimetype="application/xml"
+        )
 
     bot_reply = get_bot_response(incoming_msg)
 
-    resp.message(bot_reply)
+    response.message(bot_reply)
 
-    return str(resp)
+    return Response(
+        str(response),
+        mimetype="application/xml"
+    )
 
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"})
-    
+
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
