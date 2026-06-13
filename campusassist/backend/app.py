@@ -2,30 +2,35 @@ from flask import Flask, request, jsonify,Response
 
 from flask_cors import CORS
 from twilio.twiml.messaging_response import MessagingResponse
+from db import faq_collection
 
 app = Flask(__name__)
 CORS(app)
-
-FAQS = {
-    "admission": "Admissions are open for 2026. Visit our portal to apply.",
-    "courses": "We offer B.Tech, M.Tech, and MBA programs.",
-    "hostel": "Hostel facilities are available for both boys and girls.",
-    "fee structure": "Fees vary by course. B.Tech is ₹1,20,000 per year.",
-    "hostel fee": "Hostel fee is ₹80,000 per year.",
-    "scholarship": "We offer merit-based and need-based scholarships.",
-    "placement": "Our college has strong placement support.",
-    "library": "The library is open 24/7 for students.",
-    "aiml syllabus": "Python, Mathematics, AI Basics, Data Structures."
-}
 
 def get_bot_response(message):
     message_lower = message.lower()
 
     print(f"Incoming message: {message}")
 
-    for keyword, answer in FAQS.items():
-        if keyword in message_lower:
-            return answer
+    if faq_collection is None:
+        return "I'm sorry, our database is currently down for maintenance. Please try again later."
+
+    try:
+        # Fetch all FAQs from MongoDB
+        faqs = faq_collection.find()
+        
+        for faq in faqs:
+            q = faq.get("question", "").lower()
+            category = faq.get("category", "").lower()
+            
+            # Simple matching logic without AI/NLP
+            # Matches if the category is in the user message, or if the message overlaps with the question
+            if (category and category in message_lower) or (message_lower in q and len(message_lower) > 3) or (q in message_lower):
+                return faq.get("answer")
+
+    except Exception as e:
+        print(f"Database error: {e}")
+        return "I'm having trouble accessing my knowledge base right now."
 
     return "I'm sorry, I don't have an answer for that yet."
 
@@ -81,6 +86,23 @@ def home():
         "status": "online",
         "message": "CampusAssist AI Backend Running"
     })
+
+@app.route("/test-faq", methods=["GET"])
+def test_faq():
+    if faq_collection is None:
+        return jsonify({"error": "Database not connected"}), 500
+        
+    try:
+        faq = faq_collection.find_one({}, {"_id": 0})
+        if faq:
+            return jsonify({
+                "question": faq.get("question"),
+                "answer": faq.get("answer")
+            })
+        else:
+            return jsonify({"error": "No FAQs found in the collection"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

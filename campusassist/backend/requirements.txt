@@ -4,3 +4,4 @@ twilio
 python-dotenv
 google-generativeai
 gunicorn
+pymongo
