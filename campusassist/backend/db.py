@@ -29,7 +29,9 @@ def get_db_connection():
 
 client = get_db_connection()
 faq_collection = None
+admin_collection = None
 
 if client:
     db = client["campusassist"]
     faq_collection = db["faqs"]
+    admin_collection = db["admins"]

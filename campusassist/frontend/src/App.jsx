@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -8,7 +9,14 @@ import Chatbot from './components/Chatbot';
 import WhatsAppButton from './components/WhatsAppButton';
 import { GraduationCap, MessageSquare } from './Icons';
 
-function App() {
+// Admin Components
+import Login from './components/admin/Login';
+import AdminLayout from './components/admin/AdminLayout';
+import DashboardHome from './components/admin/DashboardHome';
+import FaqManagement from './components/admin/FaqManagement';
+import ProtectedRoute from './components/admin/ProtectedRoute';
+
+function MainApp() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   return (
@@ -43,6 +51,24 @@ function App() {
       {/* WhatsApp Button */}
       <WhatsAppButton />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<MainApp />} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin/login" element={<Login />} />
+      
+      <Route path="/admin" element={<ProtectedRoute />}>
+        <Route element={<AdminLayout />}>
+          <Route path="dashboard" element={<DashboardHome />} />
+          <Route path="faqs" element={<FaqManagement />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 }
 
