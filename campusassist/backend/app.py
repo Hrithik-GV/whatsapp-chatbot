@@ -9,6 +9,10 @@ from flask_cors import CORS
 from twilio.twiml.messaging_response import MessagingResponse
 from db import faq_collection, admin_collection
 
+# Import semantic search services
+from services.embedding_service import generate_embedding
+from services.semantic_search import find_best_faq_match
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET', 'super-secret-default-key')
 CORS(app)
@@ -41,31 +45,23 @@ def token_required(f):
 
 
 def get_bot_response(message):
-    message_lower = message.lower()
-
     print(f"Incoming message: {message}")
 
     if faq_collection is None:
         return "I'm sorry, our database is currently down for maintenance. Please try again later."
 
     try:
-        # Fetch all FAQs from MongoDB
-        faqs = faq_collection.find()
+        # Perform Semantic Search
+        best_match, best_score = find_best_faq_match(message, faq_collection)
         
-        for faq in faqs:
-            q = faq.get("question", "").lower()
-            category = faq.get("category", "").lower()
+        if best_match:
+            return best_match.get("answer")
             
-            # Simple matching logic without AI/NLP
-            # Matches if the category is in the user message, or if the message overlaps with the question
-            if (category and category in message_lower) or (message_lower in q and len(message_lower) > 3) or (q in message_lower):
-                return faq.get("answer")
+        return "Sorry, I couldn't find a matching FAQ."
 
     except Exception as e:
         print(f"Database error: {e}")
         return "I'm having trouble accessing my knowledge base right now."
-
-    return "I'm sorry, I don't have an answer for that yet."
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -178,10 +174,20 @@ def get_admin_faqs(current_admin):
 @token_required
 def create_faq(current_admin):
     data = request.json
+    question = data.get("question", "")
+    search_text = data.get("search_text", "")
+    answer = data.get("answer", "")
+    
+    # Generate embedding for the new question + search_text + answer
+    embedding_text = f"{question} {search_text} {answer}".strip()
+    embedding = generate_embedding(embedding_text) if embedding_text else []
+    
     new_faq = {
-        "question": data.get("question"),
-        "answer": data.get("answer"),
+        "question": question,
+        "search_text": search_text,
+        "answer": answer,
         "category": data.get("category"),
+        "embedding": embedding,
         "created_at": datetime.datetime.now(datetime.timezone.utc),
         "updated_at": datetime.datetime.now(datetime.timezone.utc),
         "is_active": True
@@ -194,10 +200,20 @@ def create_faq(current_admin):
 @token_required
 def update_faq(current_admin, id):
     data = request.json
+    question = data.get("question", "")
+    search_text = data.get("search_text", "")
+    answer = data.get("answer", "")
+    
+    # Check if text exists and regenerate embedding
+    embedding_text = f"{question} {search_text} {answer}".strip()
+    embedding = generate_embedding(embedding_text) if embedding_text else []
+    
     update_data = {
-        "question": data.get("question"),
-        "answer": data.get("answer"),
+        "question": question,
+        "search_text": search_text,
+        "answer": answer,
         "category": data.get("category"),
+        "embedding": embedding,
         "updated_at": datetime.datetime.now(datetime.timezone.utc)
     }
     
