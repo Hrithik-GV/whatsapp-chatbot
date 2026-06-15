@@ -7,3 +7,5 @@ gunicorn
 pymongo
 PyJWT
 bcrypt
+sentence-transformers
+scikit-learn

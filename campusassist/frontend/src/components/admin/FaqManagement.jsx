@@ -6,7 +6,7 @@ const FaqManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentFaq, setCurrentFaq] = useState({ _id: '', question: '', answer: '', category: '' });
+  const [currentFaq, setCurrentFaq] = useState({ _id: '', question: '', search_text: '', answer: '', category: '' });
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,9 +72,12 @@ const FaqManagement = () => {
 
   const openModal = (faq = null) => {
     if (faq) {
-      setCurrentFaq(faq);
+      setCurrentFaq({
+        ...faq,
+        search_text: faq.search_text || ''
+      });
     } else {
-      setCurrentFaq({ _id: '', question: '', answer: '', category: '' });
+      setCurrentFaq({ _id: '', question: '', search_text: '', answer: '', category: '' });
     }
     setIsModalOpen(true);
   };
@@ -210,6 +213,16 @@ const FaqManagement = () => {
                   required
                   value={currentFaq.question}
                   onChange={(e) => setCurrentFaq({...currentFaq, question: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Search Keywords (Optional)</label>
+                <input 
+                  type="text" 
+                  placeholder="office timings, working hours"
+                  value={currentFaq.search_text}
+                  onChange={(e) => setCurrentFaq({...currentFaq, search_text: e.target.value})}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

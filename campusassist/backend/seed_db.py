@@ -1,4 +1,6 @@
 from db import faq_collection
+from services.embedding_service import generate_embedding
+import datetime
 
 faqs_data = [
     {
@@ -52,9 +54,28 @@ if __name__ == "__main__":
     if faq_collection is None:
         print("Error: Could not connect to MongoDB.")
     else:
-        # Check if the collection is already populated to avoid duplicates
+        print("Updating existing FAQs with embeddings...")
+        faqs = list(faq_collection.find())
+        updated_count = 0
+        for faq in faqs:
+            q = faq.get("question")
+            if q and not faq.get("embedding"):
+                print(f"Generating embedding for: {q}")
+                embedding = generate_embedding(q)
+                faq_collection.update_one(
+                    {"_id": faq["_id"]},
+                    {"$set": {"embedding": embedding, "updated_at": datetime.datetime.now(datetime.timezone.utc)}}
+                )
+                updated_count += 1
+                
+        # Ensure base FAQs are present
         if faq_collection.count_documents({}) == 0:
+            for faq in faqs_data:
+                faq["embedding"] = generate_embedding(faq["question"])
+                faq["created_at"] = datetime.datetime.now(datetime.timezone.utc)
+                faq["updated_at"] = datetime.datetime.now(datetime.timezone.utc)
+                faq["is_active"] = True
             result = faq_collection.insert_many(faqs_data)
             print(f"Success! Inserted {len(result.inserted_ids)} FAQs into your MongoDB cluster.")
         else:
-            print(f"Your database already has {faq_collection.count_documents({})} FAQs in it!")
+            print(f"Your database already has {faq_collection.count_documents({})} FAQs in it. Updated {updated_count} missing embeddings.")
