@@ -9,7 +9,7 @@ from flask_cors import CORS
 from twilio.twiml.messaging_response import MessagingResponse
 from db import faq_collection, admin_collection
 
-# Import semantic search services
+# Import semantic search servicess
 from services.embedding_service import generate_embedding
 from services.semantic_search import find_best_faq_match
 
