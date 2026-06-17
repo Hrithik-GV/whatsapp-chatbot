@@ -7,11 +7,12 @@ from bson.objectid import ObjectId
 from flask import Flask, request, jsonify,Response
 from flask_cors import CORS
 from twilio.twiml.messaging_response import MessagingResponse
-from db import faq_collection, admin_collection
+from db import faq_collection, admin_collection, unanswered_collection
 
 # Import semantic search servicess
 from services.embedding_service import generate_embedding
 from services.semantic_search import find_best_faq_match
+from services.gemini_service import get_gemini_response
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET', 'super-secret-default-key')
@@ -54,14 +55,30 @@ def get_bot_response(message):
         # Perform Semantic Search
         best_match, best_score = find_best_faq_match(message, faq_collection)
         
+        print(f"Question:\n\"{message}\"")
+        print(f"Similarity:\n{best_score:.2f}")
+        
         if best_match:
+            print("Source:\nFAQ\n")
             return best_match.get("answer")
             
-        return "Sorry, I couldn't find a matching FAQ."
+        # Fallback to Gemini
+        print("Source:\nGemini\n")
+        
+        # Save to unanswered_questions collection
+        unanswered_collection.insert_one({
+            "question": message,
+            "similarity_score": float(best_score),
+            "source": "gemini",
+            "timestamp": datetime.datetime.now(datetime.timezone.utc)
+        })
+        
+        ai_response = get_gemini_response(message)
+        return ai_response
 
     except Exception as e:
-        print(f"Database error: {e}")
-        return "I'm having trouble accessing my knowledge base right now."
+        print(f"Error processing bot response: {str(e)}")
+        return "I'm experiencing some technical difficulties right now. Please try again later."
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -240,11 +257,18 @@ def get_stats(current_admin):
     hostel = faq_collection.count_documents({"category": {"$regex": "hostel", "$options": "i"}})
     placement = faq_collection.count_documents({"category": {"$regex": "placement", "$options": "i"}})
     
+    total_unanswered = unanswered_collection.count_documents({})
+    gemini_responses = unanswered_collection.count_documents({"source": "gemini"})
+    total_faq_responses = faq_collection.count_documents({}) # This isn't actual responses but total faqs as per original, though the user asked for total FAQ responses. Without a chat history collection we can't count FAQ responses.
+    
     return jsonify({
         "total": total,
         "admissions": admissions,
         "hostel": hostel,
-        "placement": placement
+        "placement": placement,
+        "total_faqs": total,
+        "total_unanswered": total_unanswered,
+        "gemini_responses": gemini_responses
     })
 
 if __name__ == "__main__":
