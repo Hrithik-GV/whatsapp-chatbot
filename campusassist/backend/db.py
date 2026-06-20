@@ -31,9 +31,20 @@ client = get_db_connection()
 faq_collection = None
 admin_collection = None
 unanswered_collection = None
+conversations_collection = None
 
 if client:
     db = client["campusassist"]
     faq_collection = db["faqs"]
     admin_collection = db["admins"]
     unanswered_collection = db["unanswered_questions"]
+    conversations_collection = db["conversations"]
+    
+    # Create TTL index for conversations collection (30 days = 2592000 seconds)
+    try:
+        conversations_collection.create_index(
+            "timestamp",
+            expireAfterSeconds=2592000
+        )
+    except Exception as e:
+        print(f"Warning: Could not create TTL index on conversations: {e}")

@@ -13,6 +13,7 @@ from db import faq_collection, admin_collection, unanswered_collection
 from services.embedding_service import generate_embedding
 from services.semantic_search import find_best_faq_match
 from services.gemini_service import get_gemini_response
+from services.conversation_service import store_message, get_chat_history, get_context_for_gemini
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET', 'super-secret-default-key')
@@ -45,11 +46,14 @@ def token_required(f):
     return decorated
 
 
-def get_bot_response(message):
+def get_bot_response(message, session_id=None):
     print(f"Incoming message: {message}")
 
     if faq_collection is None:
         return "I'm sorry, our database is currently down for maintenance. Please try again later."
+        
+    if session_id:
+        store_message(session_id, "user", message)
 
     try:
         # Perform Semantic Search
@@ -60,7 +64,10 @@ def get_bot_response(message):
         
         if best_match:
             print("Source:\nFAQ\n")
-            return best_match.get("answer")
+            reply = best_match.get("answer")
+            if session_id:
+                store_message(session_id, "assistant", reply)
+            return reply
             
         # Fallback to Gemini
         print("Source:\nGemini\n")
@@ -73,7 +80,12 @@ def get_bot_response(message):
             "timestamp": datetime.datetime.now(datetime.timezone.utc)
         })
         
-        ai_response = get_gemini_response(message)
+        chat_history = get_context_for_gemini(session_id) if session_id else None
+        ai_response = get_gemini_response(message, chat_history)
+        
+        if session_id:
+            store_message(session_id, "assistant", ai_response)
+            
         return ai_response
 
     except Exception as e:
@@ -88,13 +100,22 @@ def chat():
         return jsonify({"success": False, "reply": "Invalid request"}), 400
 
     user_message = data.get("message", "").strip()
+    session_id = data.get("session_id")
 
     if not user_message:
         return jsonify({"success": False, "reply": "Please enter a message"})
 
-    bot_reply = get_bot_response(user_message)
+    bot_reply = get_bot_response(user_message, session_id)
 
     return jsonify({"success": True, "reply": bot_reply})
+    
+@app.route("/api/chat/history/<session_id>", methods=["GET"])
+def get_history(session_id):
+    if not session_id:
+        return jsonify({"messages": []}), 400
+        
+    history = get_chat_history(session_id)
+    return jsonify({"messages": history})
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp():

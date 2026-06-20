@@ -44,16 +44,28 @@ except Exception as e:
     print(f"Failed to initialize Gemini model: {e}")
     model = None
 
-def get_gemini_response(question):
+def get_gemini_response(question, chat_history=None):
     """
     Generate a response using Gemini AI.
     Handles errors and returns a clean text response.
+    Includes previous chat history for context if provided.
     """
     if not model:
         return "I'm unable to answer that question at the moment. Please contact the college administration."
         
     try:
-        response = model.generate_content(question)
+        # Build prompt with history
+        prompt = ""
+        if chat_history:
+            prompt += "Previous conversation:\n"
+            for msg in chat_history:
+                role_name = "Student" if msg.get("role") == "user" else "Assistant"
+                prompt += f"{role_name}: {msg.get('message')}\n"
+            prompt += "\n"
+            
+        prompt += f"Student's Current Question: {question}"
+        
+        response = model.generate_content(prompt)
         if response and response.text:
             return response.text.strip()
         else:

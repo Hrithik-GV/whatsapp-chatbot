@@ -8,7 +8,44 @@ export default function Chatbot({ isOpen, setIsOpen }) {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState('');
   const messagesEndRef = useRef(null);
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  // Session ID Management
+  useEffect(() => {
+    let sid = localStorage.getItem('chat_session_id');
+    if (!sid) {
+      sid = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID() 
+        : Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('chat_session_id', sid);
+    }
+    setSessionId(sid);
+    
+    // Fetch History
+    const fetchHistory = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/chat/history/${sid}`);
+        if (res.data.messages && res.data.messages.length > 0) {
+          const loadedMessages = res.data.messages.map(m => ({
+            text: m.message,
+            isBot: m.role === 'assistant'
+          }));
+          // Prepend default message
+          setMessages([
+            { text: "Hi! I'm CampusAssist AI. How can I help you today?", isBot: true },
+            ...loadedMessages
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to load chat history", err);
+      }
+    };
+    
+    fetchHistory();
+  }, [API_URL]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,9 +65,9 @@ export default function Chatbot({ isOpen, setIsOpen }) {
     setIsLoading(true);
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await axios.post(`${API_URL}/chat`, { 
-        message: userText 
+        message: userText,
+        session_id: sessionId
       });
       setMessages(prev => [...prev, { text: response.data.reply, isBot: true }]);
     } catch (error) {
