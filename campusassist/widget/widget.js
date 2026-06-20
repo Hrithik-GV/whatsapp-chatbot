@@ -5,7 +5,7 @@
     const WHATSAPP_URL =
         "https://wa.me/14155238886?text=Hi%20I%20need%20help";
 
-    // Floating button
+    // Floating buttonn
     const button = document.createElement("div");
 
     button.innerHTML = "💬";
