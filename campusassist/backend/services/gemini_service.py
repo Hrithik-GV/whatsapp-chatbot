@@ -13,7 +13,7 @@ if GEMINI_API_KEY:
 else:
     print("WARNING: GEMINI_API_KEY is missing from environment variables.")
 
-# Define system prompt
+# Define  system prompt
 SYSTEM_INSTRUCTION = """You are CampusAssist AI, a college support assistant.
 You help students with:
 * Admissions
